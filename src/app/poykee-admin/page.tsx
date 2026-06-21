@@ -22,6 +22,7 @@ export default async function AdminPage() {
             <h1 className="text-4xl font-light">Poykee Admin</h1>
             <p className="mt-2 text-neutral-500">Manage your products</p>
           </div>
+
           <Link href="/" className="text-sm underline">
             View website
           </Link>
@@ -29,7 +30,7 @@ export default async function AdminPage() {
 
         <div className="overflow-hidden rounded-xl border bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-100 text-xs uppercase tracking-wide text-neutral-500">
+            <thead className="bg-neutral-100">
               <tr>
                 <th className="p-4">Product</th>
                 <th className="p-4">Price</th>
@@ -38,6 +39,7 @@ export default async function AdminPage() {
                 <th className="p-4">Category</th>
               </tr>
             </thead>
+
             <tbody>
               {products?.map((product) => (
                 <tr key={product.id} className="border-t">
@@ -52,21 +54,40 @@ export default async function AdminPage() {
                       ) : (
                         <div className="h-16 w-16 bg-neutral-100" />
                       )}
+
                       <div>
                         <p className="font-medium">{product.title}</p>
-                        <Link
-                          href={`/products/${product.slug}`}
-                          className="text-xs text-neutral-500 underline"
-                        >
-                          View product
-                        </Link>
+
+                        <div className="mt-1 flex gap-3">
+                          <Link
+                            href={`/products/${product.slug}`}
+                            className="text-xs text-neutral-500 underline"
+                          >
+                            View
+                          </Link>
+
+                          <Link
+                            href={`/poykee-admin/products/${product.id}`}
+                            className="text-xs text-blue-600 underline"
+                          >
+                            Edit
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="p-4">${Number(product.price || 0).toLocaleString()}</td>
+
+                  <td className="p-4">
+                    ${Number(product.price || 0).toLocaleString()}
+                  </td>
+
                   <td className="p-4">{product.inventory}</td>
-                  <td className="p-4">{product.published ? "Yes" : "No"}</td>
-                  <td className="max-w-xs truncate p-4">{product.category}</td>
+
+                  <td className="p-4">
+                    {product.published ? "Yes" : "No"}
+                  </td>
+
+                  <td className="p-4">{product.category}</td>
                 </tr>
               ))}
             </tbody>
