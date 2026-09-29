@@ -15,7 +15,7 @@ async function login(formData: FormData) {
   });
 
   if (error) {
-    redirect("/poykee-admin/login?error=1");
+    redirect(`/poykee-admin/login?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/poykee-admin");
@@ -36,7 +36,7 @@ export default async function LoginPage({
 
         {error && (
           <p className="mb-5 bg-red-50 p-3 text-sm text-red-700">
-            Incorrect email or password.
+            {decodeURIComponent(error)}
           </p>
         )}
 
