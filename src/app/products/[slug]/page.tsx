@@ -22,13 +22,21 @@ export default async function ProductPage({
     process.env.SUPABASE_SECRET_KEY!
   );
 
-  const { data: dbProduct } = await supabase
+  // The public site still uses the original CSV slugs.
+  // Find the corresponding Supabase product by SKU first.
+  let query = supabase
     .from("products")
     .select(
       "id,slug,title,description,price,image_url,category,inventory,published,sku"
-    )
-    .eq("slug", slug)
-    .maybeSingle();
+    );
+
+  if (localProduct?.sku) {
+    query = query.eq("sku", localProduct.sku);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: dbProduct } = await query.maybeSingle();
 
   if (!dbProduct) notFound();
 
