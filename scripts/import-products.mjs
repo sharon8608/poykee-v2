@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import Papa from "papaparse";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -8,69 +7,125 @@ dotenv.config({ path: ".env.local" });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.SUPABASE_SECRET_KEY,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
-const csvPath = path.join(process.cwd(), "data/imports/catalog_products.csv");
-const csv = fs.readFileSync(csvPath, "utf8");
+const csvPath = "data/imports/catalog_products.csv";
 
-function slugify(value = "") {
-  return value
-    .toLowerCase()
-    .replace(/<[^>]*>/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "")
-    .slice(0, 70);
+if (!fs.existsSync(csvPath)) {
+  throw new Error(`CSV not found: ${csvPath}`);
 }
 
-function cleanHtml(html = "") {
-  return html
+const csv = fs.readFileSync(csvPath, "utf8");
+
+const parsed = Papa.parse(csv, {
+  header: true,
+  skipEmptyLines: true,
+});
+
+if (parsed.errors.length) {
+  console.log("CSV warnings:", parsed.errors.slice(0, 5));
+}
+
+function cleanHtml(value = "") {
+  return String(value)
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .trim();
 }
 
-function wixImageToUrl(image = "") {
-  const first = image.split(";")[0]?.trim();
-  if (!first) return "";
-  if (first.startsWith("http")) return first;
-  return `https://static.wixstatic.com/media/${first}`;
+function wixImageToUrl(value = "") {
+  const v = String(value).trim();
+
+  if (!v) return null;
+
+  if (v.startsWith("http://") || v.startsWith("https://")) {
+    return v;
+  }
+
+  if (v.startsWith("wix:image://")) {
+    const match = v.match(/wix:image:\/\/v1\/([^/#]+)/);
+    if (match?.[1]) {
+      return `https://static.wixstatic.com/media/${match[1]}`;
+    }
+  }
+
+  return v;
 }
 
-const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-const usedSlugs = new Map();
-
-function uniqueSlug(base) {
-  const safeBase = base || "poykee-item";
-  const count = usedSlugs.get(safeBase) || 0;
-  usedSlugs.set(safeBase, count + 1);
-  return count === 0 ? safeBase : `${safeBase}-${count + 1}`;
+function makeSlug(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120);
 }
 
-const products = parsed.data
-  .filter((row) => row.fieldType === "Product")
-  .map((row, index) => {
-    const title = row.name?.trim() || "Untitled work";
-    const sku = row.sku?.trim() || `POYKEE-${index + 1}`;
-    const baseSlug = `${slugify(title)}-${slugify(sku || String(index + 1))}`;
+const seen = new Set();
+const products = [];
 
-    return {
-      sku,
-      slug: uniqueSlug(baseSlug),
-      title,
-      description: cleanHtml(row.description || ""),
-      price: Number(row.price || 0),
-      image_url: wixImageToUrl(row.productImageUrl || ""),
-      category: row.collection || "",
-      inventory: Number(row.inventory || 0),
-      published: String(row.visible).toLowerCase() === "true",
-    };
+for (let index = 0; index < parsed.data.length; index++) {
+  const row = parsed.data[index];
+
+  const title = String(row.name || row.title || "").trim();
+
+  if (!title) continue;
+
+  const sku = String(row.sku || "").trim();
+
+  let slug =
+    String(row.slug || "").trim() ||
+    makeSlug(title) ||
+    `product-${index + 1}`;
+
+  // Ensure every slug is unique inside this import.
+  let uniqueSlug = slug;
+  let counter = 2;
+
+  while (seen.has(uniqueSlug)) {
+    uniqueSlug = `${slug}-${counter++}`;
+  }
+
+  seen.add(uniqueSlug);
+
+  const priceValue = String(row.price || "0")
+    .replace(/[^0-9.,-]/g, "")
+    .replace(",", ".");
+
+  const inventoryValue = parseInt(row.inventory || "0", 10);
+
+  products.push({
+    sku: sku || null,
+    slug: uniqueSlug,
+    title,
+    description: cleanHtml(row.description || ""),
+    price: Number(priceValue) || 0,
+    image_url: wixImageToUrl(
+      row.productImageUrl ||
+      row.image ||
+      row.image_url ||
+      ""
+    ),
+    category: String(row.collection || row.category || "").trim() || null,
+    inventory: Number.isFinite(inventoryValue) ? inventoryValue : 0,
+    published: String(row.visible ?? "true").toLowerCase() !== "false",
   });
+}
 
-console.log(`Importing ${products.length} products...`);
+console.log(`CSV rows parsed: ${parsed.data.length}`);
+console.log(`Products prepared: ${products.length}`);
 
 for (let i = 0; i < products.length; i += 100) {
   const batch = products.slice(i, i + 100);
@@ -80,11 +135,14 @@ for (let i = 0; i < products.length; i += 100) {
     .upsert(batch, { onConflict: "slug" });
 
   if (error) {
+    console.error(`Import failed around product ${i + 1}:`);
     console.error(error);
     process.exit(1);
   }
 
-  console.log(`Imported ${Math.min(i + 100, products.length)} / ${products.length}`);
+  console.log(
+    `Imported ${Math.min(i + 100, products.length)} / ${products.length}`
+  );
 }
 
-console.log("Done.");
+console.log("IMPORT COMPLETE");
