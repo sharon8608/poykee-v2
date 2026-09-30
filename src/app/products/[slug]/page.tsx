@@ -1,13 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProductBySlug, getProducts } from "@/lib/products";
+import { createClient } from "@supabase/supabase-js";
+import { getProductBySlug } from "@/lib/products";
+import PayPalCheckout from "@/components/PayPalCheckout";
 
-export function generateStaticParams() {
-  return getProducts().slice(0, 200).map((product) => ({
-    slug: product.slug,
-  }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProductPage({
   params,
@@ -15,9 +13,40 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
 
-  if (!product) notFound();
+  // CSV is temporarily retained for the complete Wix image gallery.
+  const localProduct = getProductBySlug(slug);
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
+
+  const { data: dbProduct } = await supabase
+    .from("products")
+    .select(
+      "id,slug,title,description,price,image_url,category,inventory,published,sku"
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!dbProduct) notFound();
+
+  const images =
+    localProduct?.imageUrls?.length
+      ? localProduct.imageUrls
+      : dbProduct.image_url
+        ? [dbProduct.image_url]
+        : [];
+
+  const collections =
+    localProduct?.collection?.length
+      ? localProduct.collection
+      : dbProduct.category
+        ? [dbProduct.category]
+        : [];
+
+  const available = dbProduct.published && dbProduct.inventory > 0;
 
   return (
     <main className="min-h-screen bg-white text-neutral-950">
@@ -26,7 +55,11 @@ export default async function ProductPage({
           <Link href="/" className="text-2xl font-semibold tracking-[0.25em]">
             POYKEE
           </Link>
-          <Link href="/" className="text-sm uppercase tracking-wide text-neutral-600">
+
+          <Link
+            href="/"
+            className="text-sm uppercase tracking-wide text-neutral-600"
+          >
             Back to collection
           </Link>
         </div>
@@ -34,12 +67,12 @@ export default async function ProductPage({
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 lg:grid-cols-2">
         <div className="space-y-6">
-          {product.imageUrls.length ? (
-            product.imageUrls.slice(0, 6).map((image, index) => (
-              <div key={image} className="bg-neutral-100">
+          {images.length ? (
+            images.slice(0, 10).map((image, index) => (
+              <div key={`${image}-${index}`} className="bg-neutral-100">
                 <Image
                   src={image}
-                  alt={`${product.name} image ${index + 1}`}
+                  alt={`${dbProduct.title} image ${index + 1}`}
                   width={1000}
                   height={1200}
                   className="h-auto w-full object-contain"
@@ -52,30 +85,40 @@ export default async function ProductPage({
         </div>
 
         <div className="lg:sticky lg:top-8 lg:self-start">
-          <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
-            {product.collection.join(" • ")}
-          </p>
+          {collections.length > 0 && (
+            <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
+              {collections.join(" • ")}
+            </p>
+          )}
 
           <h1 className="mt-4 text-4xl font-light leading-tight">
-            {product.name}
+            {dbProduct.title}
           </h1>
 
-          <p className="mt-6 text-2xl">${product.price.toLocaleString()}</p>
+          <p className="mt-6 text-2xl">
+            ${Number(dbProduct.price).toLocaleString()}
+          </p>
 
           <div className="mt-8 border-y border-neutral-200 py-6">
             <p className="whitespace-pre-line leading-8 text-neutral-700">
-              {product.description || "Description coming soon."}
+              {dbProduct.description || "Description coming soon."}
             </p>
           </div>
 
           <div className="mt-6 text-sm text-neutral-500">
-            <p>SKU: {product.sku}</p>
-            <p>Inventory: {product.inventory}</p>
+            <p>SKU: {dbProduct.sku || "—"}</p>
           </div>
 
-          <button className="mt-8 w-full bg-neutral-950 px-8 py-4 text-sm uppercase tracking-[0.2em] text-white">
-            Inquire / PayPal checkout coming soon
-          </button>
+          {available ? (
+            <PayPalCheckout
+              productId={dbProduct.id}
+              clientId={process.env.PAYPAL_CLIENT_ID!}
+            />
+          ) : (
+            <div className="mt-8 bg-neutral-100 px-8 py-4 text-center text-sm uppercase tracking-[0.2em]">
+              Sold
+            </div>
+          )}
         </div>
       </section>
     </main>
