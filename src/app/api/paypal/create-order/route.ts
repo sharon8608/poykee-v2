@@ -88,7 +88,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ id: order.id });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Checkout error" }, { status: 500 });
+    console.error("CREATE ORDER ERROR:", error);
+
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    return NextResponse.json(
+      {
+        error: "Checkout error",
+        details: message,
+      },
+      { status: 500 }
+    );
   }
 }
