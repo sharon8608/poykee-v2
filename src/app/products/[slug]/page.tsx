@@ -117,6 +117,13 @@ export default async function ProductPage({
             <p>SKU: {dbProduct.sku || "—"}</p>
           </div>
 
+          <Link
+            href={`/contact?artwork=${encodeURIComponent(dbProduct.title)}`}
+            className="mt-6 block w-full border border-neutral-950 px-8 py-4 text-center text-sm uppercase tracking-[0.2em] hover:bg-neutral-50"
+          >
+            Ask about this artwork
+          </Link>
+
           {available ? (
             <PayPalCheckout
               productId={dbProduct.id}
