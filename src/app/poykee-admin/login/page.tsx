@@ -1,32 +1,45 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+"use client";
 
-async function login(formData: FormData) {
-  "use server";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
-  const supabase = await createClient();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  const email = String(formData.get("email"));
-  const password = String(formData.get("password"));
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  async function login(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  if (error) {
-    redirect(`/poykee-admin/login?error=${encodeURIComponent(error.message)}`);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      router.push("/poykee-admin");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+      setLoading(false);
+    }
   }
-
-  redirect("/poykee-admin");
-}
-
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-100 p-6">
@@ -36,32 +49,35 @@ export default async function LoginPage({
 
         {error && (
           <p className="mb-5 bg-red-50 p-3 text-sm text-red-700">
-            {decodeURIComponent(error)}
+            {error}
           </p>
         )}
 
-        <form action={login} className="space-y-5">
+        <form onSubmit={login} className="space-y-5">
           <input
-            name="email"
             type="email"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             className="w-full border p-3"
           />
 
           <input
-            name="password"
             type="password"
             required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             className="w-full border p-3"
           />
 
           <button
             type="submit"
-            className="w-full bg-black px-6 py-3 text-white"
+            disabled={loading}
+            className="w-full bg-black px-6 py-3 text-white disabled:opacity-50"
           >
-            Log in
+            {loading ? "Signing in..." : "Log in"}
           </button>
         </form>
       </div>
