@@ -104,5 +104,55 @@ export function getProductBySlug(slug: string) {
 }
 
 export function getFeaturedProducts(limit = 24) {
-  return getProducts().slice(0, limit);
+  const products = getProducts().filter(
+    (product) =>
+      product.visible &&
+      product.inventory > 0 &&
+      product.price >= 150 &&
+      product.imageUrls.length > 0
+  );
+
+  const sweetSpot = products
+    .filter((product) => product.price >= 250 && product.price <= 600)
+    .sort((a, b) => b.price - a.price);
+
+  const affordable = products
+    .filter((product) => product.price >= 150 && product.price < 250)
+    .sort((a, b) => b.price - a.price);
+
+  const premium = products
+    .filter((product) => product.price > 600)
+    .sort((a, b) => a.price - b.price);
+
+  const featured: Product[] = [];
+
+  let s = 0;
+  let a = 0;
+  let p = 0;
+
+  while (featured.length < limit) {
+    if (sweetSpot[s]) featured.push(sweetSpot[s++]);
+
+    if (sweetSpot[s] && featured.length < limit) {
+      featured.push(sweetSpot[s++]);
+    }
+
+    if (premium[p] && featured.length < limit) {
+      featured.push(premium[p++]);
+    }
+
+    if (affordable[a] && featured.length < limit) {
+      featured.push(affordable[a++]);
+    }
+
+    if (
+      s >= sweetSpot.length &&
+      a >= affordable.length &&
+      p >= premium.length
+    ) {
+      break;
+    }
+  }
+
+  return featured.slice(0, limit);
 }

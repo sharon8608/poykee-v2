@@ -3,25 +3,10 @@ import ProductGrid from "@/components/ProductGrid";
 import { getFeaturedProducts } from "@/lib/products";
 
 export default function Home() {
-  const products = getFeaturedProducts(32);
+  const products = getFeaturedProducts(16);
 
   return (
     <main className="min-h-screen bg-white text-neutral-950">
-      <header className="border-b border-neutral-200 px-6 py-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/" className="text-2xl font-semibold tracking-[0.25em]">
-            POYKEE
-          </Link>
-
-          <nav className="hidden gap-8 text-sm uppercase tracking-wide text-neutral-600 md:flex">
-            <Link href="/products?category=paintings">Paintings</Link>
-            <Link href="/products?category=drawings">Drawings</Link>
-            <Link href="/products?category=prints">Prints</Link>
-            <Link href="/products?category=photography">Photography</Link>
-            <Link href="/products">All Works</Link>
-          </nav>
-        </div>
-      </header>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         <p className="mb-4 text-sm uppercase tracking-[0.3em] text-neutral-500">

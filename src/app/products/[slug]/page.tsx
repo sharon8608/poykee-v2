@@ -58,20 +58,6 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-white text-neutral-950">
-      <header className="border-b border-neutral-200 px-6 py-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/" className="text-2xl font-semibold tracking-[0.25em]">
-            POYKEE
-          </Link>
-
-          <Link
-            href="/"
-            className="text-sm uppercase tracking-wide text-neutral-600"
-          >
-            Back to collection
-          </Link>
-        </div>
-      </header>
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 lg:grid-cols-2">
         <div className="space-y-6">
