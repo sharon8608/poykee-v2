@@ -40,7 +40,7 @@ export default async function ContactPage({
       )}
 
       <a
-        href={`mailto:sasportasgallery@gmail.com?subject=${encodeURIComponent(subject)}`}
+        href={`mailto:poykeeart@gmail.com?subject=${encodeURIComponent(subject)}`}
         className="mt-10 inline-block bg-black px-8 py-4 text-sm uppercase tracking-[0.2em] text-white"
       >
         Email Poykee

@@ -8,25 +8,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white text-neutral-950">
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <p className="mb-4 text-sm uppercase tracking-[0.3em] text-neutral-500">
-          Fine Art • Prints • Drawings • Photography
-        </p>
-
-        <h1 className="max-w-4xl text-5xl font-light leading-tight md:text-7xl">
-          Curated vintage and original artworks.
-        </h1>
-
-        <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-600">
-          Discover paintings, drawings, prints and photographs from the Poykee collection.
-        </p>
-
-        <Link
-          href="/products"
-          className="mt-8 inline-block border border-neutral-950 px-7 py-3 text-sm uppercase tracking-[0.2em]"
-        >
-          Browse all works
-        </Link>
+      <section className="w-full bg-[#93a79d]">
+        <a href="/products" className="block">
+          <img
+            src="/poykee-banner.png"
+            alt="Poykee — The Art of Collecting"
+            className="h-auto w-full object-cover"
+          />
+        </a>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-20">
